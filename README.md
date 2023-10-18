@@ -1,4 +1,4 @@
 # ugly_ter
 
-http://tchoutchou.bzhugs.xyz/
+https://tchoutchou.bzhugs.xyz/
 
