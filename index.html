@@ -1,31 +1,91 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <title>TER</title>
-</head>
-<body>
-    <label for="idDepart">Departure ID:</label>
-    <input type="text" id="idDepart" placeholder="Enter ID" value="87471003">
-    <label for="idArrive">Arrival ID:</label>
-    <input type="text" id="idArrive" placeholder="Enter ID" value="87471037">
-    <button id="searchButton">Search</button>
+<html lang="en">
 
-    <div>
-        <p id="situationalMessages"></p>
-    </div>
-    
-    <table id="resultsTable">
-        <thead>
-            <tr>
-                <th>Départ</th>
-                <th>Voie</th>
-                <th>Arrivée</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Results will be displayed here dynamically -->
-        </tbody>
-    </table>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TER</title>
+    <link rel="stylesheet" href="https://unpkg.com/mvp.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://unpkg.com/alpinejs"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+</head>
+
+<body>
+    <main x-data="{ trains: [], alerts: [], start: $persist(87471003), end: $persist(87471037) }"
+        x-effect="console.log(start, end, trains)">
+        <header>
+            <h1>TER</h1>
+        </header>
+        <form action="#">
+            <label>Departure ID:
+                <select id="start-search" x-model="start">
+                    <option x-bind:value="start" x-text="start" selected="selected"></option>
+                </select>
+            </label>
+            <label>Arrival ID:
+                <select id="end-search">
+                    <option x-bind:value="end" x-text="end" selected="selected"></option>
+                </select>
+            </label>
+            <button x-on:click="{trains, alerts} = await getTrains(start, end)">Search</button>
+        </form>
+
+        <hr>
+
+        <section>
+            <table id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>Départ</th>
+                        <th></th>
+                        <th>Voie</th>
+                        <th>Arrivée</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="t in trains" :key="t.departureTime">
+                        <tr>
+                            <td x-text="t.departureTime"></td>
+                            <td x-text="t.departureStation"></td>
+                            <td x-text="t.departureTrack"></td>
+                            <td x-text="t.arrivalTime"></td>
+                            <td x-text="t.arrivalStation"></td>
+                        </tr>
+                    </template>
+
+                    <template x-if="trains.length === 0">
+                        <tr colspan="5">
+                            <td>Nothing</td>
+                        </tr>
+                    </template>
+
+                </tbody>
+            </table>
+        </section>
+
+        <hr>
+
+        <section>
+            <header>
+                <h2>Alerts</h2>
+            </header>
+            <div>
+                <ul>
+                    <template x-for="m of alerts">
+                        <li x-text="m"></li>
+                    </template>
+                </ul>
+                <i x-show="alerts.length === 0">
+                    No problemo
+                </i>
+            </div>
+        </section>
+    </main>
 
     <script>
         async function fetchWithRetries(url, options, maxRetries = 3) {
@@ -33,14 +93,14 @@
 
             while (attempt < maxRetries) {
                 try {
-                const response = await fetch(url, options);
+                    const response = await fetch(url, options);
 
-                if (response.ok) {
-                    return response; // Successful response, exit the loop
-                }
+                    if (response.ok) {
+                        return response; // Successful response, exit the loop
+                    }
 
                 } catch (error) {
-                // Error occurred, retry
+                    // Error occurred, retry
                 }
 
                 attempt++;
@@ -48,20 +108,6 @@
 
             throw new Error(`Max retries exceeded for ${url}`);
         }
-
-
-        function addRowToTable(departureTime, departureStation, departureTrack, arrivalTime, arrivalStation, arrivalTrack) {
-            const table = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
-            const newRow = table.insertRow(table.rows.length);
-            const cell1 = newRow.insertCell(0);
-            const cell2 = newRow.insertCell(1);
-            const cell3 = newRow.insertCell(2);
-
-            cell1.innerHTML = departureTime;
-            cell2.innerHTML = departureTrack;
-            cell3.innerHTML = arrivalTime;
-        }
-
 
         function searchStation(name) {
             const url = 'https://www.ter.sncf.com/api/stop-places-autocompletions/';
@@ -89,66 +135,88 @@
             const midnight = new Date();
             midnight.setHours(23, 59, 59);
 
+            const trains = [];
+            const alerts = new Set();
+
+            const queries = [];
+
             for (const arrival of arrivals) {
                 const trainLine = arrival.line;
-                const trainLineOrigine = trainLine.origine;
 
-                if (parseInt(trainLineOrigine.id) == idDepart) {
-                const trainDetailsUrl = `https://www.ter.sncf.com/api/circulation-details?number=${trainLine.number}&circulationDate=${encodeURIComponent(arrival.arrivalDate)}&arrivalStopPlaceId=${idArrive}`;
-                const trainDetailsResponse = await fetchWithRetries(trainDetailsUrl);
-                const trainDetails = await trainDetailsResponse.json();
-                
+                if (parseInt(trainLine.origine.id) == idDepart) {
+                    const trainDetailsUrl = `https://www.ter.sncf.com/api/circulation-details?number=${trainLine.number}&circulationDate=${encodeURIComponent(arrival.arrivalDate)}&arrivalStopPlaceId=${idArrive}`;
+                    queries.push(fetchWithRetries(trainDetailsUrl).then(res => res.json()))
+
+                    for (const situationalMessage of arrival.situationalMessages || []) {
+                        if (situationalMessage.categoryName == 'INFORMATION') {
+                            continue;
+                        }
+                        alerts.add(situationalMessage.body)
+                    }
+                }
+            }
+
+            for (const trainDetails of await Promise.all(queries)) {
                 const arrivalDate = new Date(trainDetails[trainDetails.length - 1].displayedSchedule);
                 const departureDate = new Date(trainDetails[0].displayedSchedule);
-        
+
                 if (departureDate < now) {
                     continue;
                 } else if (departureDate > midnight) {
-                    return;
+                    break;
                 }
-                
-                
-                  if (arrival.situationalMessages) {
-                    for (const situationalMessage of arrival.situationalMessages) {
-                      if (situationalMessage.categoryName == 'INFORMATION') {
-                        continue;
-                      }
 
-                      if (situationalMessage != lastSituationalMessages) {
-                        document.getElementById("situationalMessages").innerText=situationalMessage.body;
-                        lastSituationalMessages = situationalMessage;
-                      }
-                    }
-                  }
+                const departureStation = trainDetails[0].stopPlace.name;
+                const departureTrack = trainDetails[0].track ? `(Voie ${trainDetails[0].track})` : '-';
 
-                const departure_station = trainDetails[0].stopPlace.name;
-                const departure_track = trainDetails[0].track ? `(Voie ${trainDetails[0].track})` : '-';
+                const arrivalStation = trainDetails[trainDetails.length - 1].stopPlace.name;
+                const arrivalTrack = trainDetails[trainDetails.length - 1].track ? `(Voie ${trainDetails[trainDetails.length - 1].track})` : '';
 
-                const arrival_station = trainDetails[trainDetails.length - 1].stopPlace.name;
-                const arrival_track = trainDetails[trainDetails.length - 1].track ? `(Voie ${trainDetails[trainDetails.length - 1].track})` : '';
+                const departureTime = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(departureDate);
+                const arrivalTime = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(arrivalDate);
 
-                const departureTime = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false}).format(departureDate);
-                const arrivalTime = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false}).format(arrivalDate);
+                console.log(`${departureTime} ${departureStation} ${departureTrack} -> ${arrivalTime} ${arrivalStation} ${arrivalTrack}`);
+                trains.push({ departureTime, departureStation, departureTrack, arrivalTime, arrivalStation, arrivalTrack })
+            }
 
-                console.log(`${departureTime} ${departure_station} ${departure_track} -> ${arrivalTime} ${arrival_station} ${arrival_track}`);
-                addRowToTable(departureTime, departure_station, departure_track, arrivalTime, arrival_station, arrival_track);
+            return {
+                trains,
+                alerts
+            }
+        }
+
+        async function getTrains(idDepart, idArrive) {
+            try {
+                return await getDepartureTable(idDepart, idArrive)
+            } catch (error) {
+                return {
+                    trains: [],
+                    alerts: [
+                        "Network ERROR"
+                    ]
                 }
             }
         }
 
-        async function executeSearch() {
-          const idDepart = document.getElementById('idDepart').value;
-          const idArrive = document.getElementById('idArrive').value;
-
-          const tableBody = document.getElementById('resultsTable').getElementsByTagName('tbody')[0];
-          while (tableBody.firstChild) {
-            tableBody.removeChild(tableBody.firstChild);
-          }
-
-          await getDepartureTable(idDepart, idArrive);
-        }
-
-        document.getElementById('searchButton').addEventListener('click', executeSearch);
-      </script>
+        $(() => {
+            $('#start-search').select2({
+                ajax: {
+                    delay: 250,
+                    processResults(data) {
+                        return {
+                            results: data.map(e => ({
+                                id: e.id,
+                                text: e.name
+                            }))
+                        };
+                    },
+                    url(params) {
+                        return 'https://www.ter.sncf.com/api/stop-places-autocompletions/' + encodeURIComponent(params.term);
+                    },
+                },
+            });
+        });
+    </script>
 </body>
+
 </html>
