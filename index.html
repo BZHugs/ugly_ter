@@ -8,30 +8,24 @@
     <link rel="stylesheet" href="https://unpkg.com/mvp.css">
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://unpkg.com/alpinejs"></script>
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <style>
+        :root {
+            font-size: 16px;
+        }
+    </style>
 </head>
 
 <body>
-    <main x-data="{ trains: [], alerts: [], start: $persist(87471003), end: $persist(87471037) }"
-        x-effect="console.log(start, end, trains)">
-        <header>
-            <h1>TER</h1>
-        </header>
-        <form action="#">
+    <main x-data="{ trains: [], alerts: [], start: $persist(87471003), end: $persist(87471037) }">
+        <form x-on:submit.prevent="{trains, alerts} = await getTrains(start, end)">
             <label>Departure ID:
-                <select id="start-search" x-model="start">
-                    <option x-bind:value="start" x-text="start" selected="selected"></option>
-                </select>
+                <input type="text" x-model="start" placeholder="Enter ID" />
             </label>
             <label>Arrival ID:
-                <select id="end-search">
-                    <option x-bind:value="end" x-text="end" selected="selected"></option>
-                </select>
+                <input type="text" x-model="end" placeholder="Enter ID" />
             </label>
-            <button x-on:click="{trains, alerts} = await getTrains(start, end)">Search</button>
+            <input type="submit" value="Search" />
         </form>
 
         <hr>
@@ -76,7 +70,7 @@
             </header>
             <div>
                 <ul>
-                    <template x-for="m of alerts">
+                    <template x-for="m in alerts">
                         <li x-text="m"></li>
                     </template>
                 </ul>
@@ -179,9 +173,11 @@
                 trains.push({ departureTime, departureStation, departureTrack, arrivalTime, arrivalStation, arrivalTrack })
             }
 
+            console.log(trains, alerts);
+
             return {
                 trains,
-                alerts
+                alerts: Array.from(alerts),
             }
         }
 
@@ -197,25 +193,6 @@
                 }
             }
         }
-
-        $(() => {
-            $('#start-search').select2({
-                ajax: {
-                    delay: 250,
-                    processResults(data) {
-                        return {
-                            results: data.map(e => ({
-                                id: e.id,
-                                text: e.name
-                            }))
-                        };
-                    },
-                    url(params) {
-                        return 'https://www.ter.sncf.com/api/stop-places-autocompletions/' + encodeURIComponent(params.term);
-                    },
-                },
-            });
-        });
     </script>
 </body>
 
