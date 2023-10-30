@@ -13,72 +13,75 @@
         :root {
             font-size: 16px;
         }
+
+        hr {
+            margin: 2rem 0 !important;
+        }
     </style>
 </head>
 
 <body>
     <main x-data="{ trains: [], alerts: [], start: $persist(87471003), end: $persist(87471037) }">
-        <form x-on:submit.prevent="{trains, alerts} = await getTrains(start, end)">
-            <label>Departure ID:
-                <input type="text" x-model="start" placeholder="Enter ID" />
-            </label>
-            <label>Arrival ID:
-                <input type="text" x-model="end" placeholder="Enter ID" />
-            </label>
-            <input type="submit" value="Search" />
-        </form>
 
-        <hr>
-
-        <section>
-            <table id="resultsTable">
-                <thead>
-                    <tr>
-                        <th>Départ</th>
-                        <th></th>
-                        <th>Voie</th>
-                        <th>Arrivée</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <template x-for="t in trains" :key="t.departureTime">
-                        <tr>
-                            <td x-text="t.departureTime"></td>
-                            <td x-text="t.departureStation"></td>
-                            <td x-text="t.departureTrack"></td>
-                            <td x-text="t.arrivalTime"></td>
-                            <td x-text="t.arrivalStation"></td>
-                        </tr>
-                    </template>
-
-                    <template x-if="trains.length === 0">
-                        <tr colspan="5">
-                            <td>Nothing</td>
-                        </tr>
-                    </template>
-
-                </tbody>
-            </table>
-        </section>
-
-        <hr>
-
-        <section>
-            <header>
-                <h2>Alerts</h2>
-            </header>
+        <section style="gap:10px">
             <div>
-                <ul>
-                    <template x-for="m in alerts">
-                        <li x-text="m"></li>
-                    </template>
-                </ul>
-                <i x-show="alerts.length === 0">
-                    No problemo
-                </i>
+                <form x-on:submit.prevent="{trains, alerts} = await getTrains(start, end)">
+                    <label>Departure ID:
+                        <input type="text" x-model="start" placeholder="Enter ID" />
+                    </label>
+                    <label>Arrival ID:
+                        <input type="text" x-model="end" placeholder="Enter ID" />
+                    </label>
+                    <input type="submit" value="Search" />
+                </form>
+            </div>
+
+            <div>
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Départ</th>
+                            <th></th>
+                            <th>Voie</th>
+                            <th>Arrivée</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="t in trains" :key="t.departureTime">
+                            <tr>
+                                <td x-text="t.departureTime"></td>
+                                <td x-text="t.departureStation"></td>
+                                <td x-text="t.departureTrack"></td>
+                                <td x-text="t.arrivalTime"></td>
+                                <td x-text="t.arrivalStation"></td>
+                            </tr>
+                        </template>
+
+                        <template x-if="trains.length === 0">
+                            <tr colspan="5">
+                                <td>Nothing</td>
+                            </tr>
+                        </template>
+
+                    </tbody>
+                </table>
             </div>
         </section>
+
+        <hr>
+
+        <article>
+            <h2>Alerts</h2>
+            <ul>
+                <template x-for="m in alerts">
+                    <li x-text="m"></li>
+                </template>
+            </ul>
+            <i x-show="alerts.length === 0">
+                No problemo
+            </i>
+        </article>
     </main>
 
     <script>
