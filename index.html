@@ -107,7 +107,7 @@
         }
 
         function searchStation(name) {
-            const url = 'https://www.ter.sncf.com/api/stop-places-autocompletions/';
+            const url = 'https://sncf.oof.li/api/stop-places-autocompletions/';
             const encodedName = encodeURIComponent(name);
             const fullUrl = `${url}${encodedName}`;
 
@@ -121,7 +121,7 @@
         }
 
         async function getDepartureTable(idDepart, idArrive) {
-            const arrivalsUrl = `https://www.ter.sncf.com/api/next-arrivals?stopPlaceIdUic=OCE${idArrive}&resultLength=20`;
+            const arrivalsUrl = `https://sncf.oof.li/api/next-arrivals?stopPlaceIdUic=OCE${idArrive}&resultLength=20`;
             const response = await fetchWithRetries(arrivalsUrl);
             const data = await response.json();
             const arrivals = data.circulations;
@@ -141,7 +141,7 @@
                 const trainLine = arrival.line;
 
                 if (parseInt(trainLine.origine.id) == idDepart) {
-                    const trainDetailsUrl = `https://www.ter.sncf.com/api/circulation-details?number=${trainLine.number}&circulationDate=${encodeURIComponent(arrival.arrivalDate)}&arrivalStopPlaceId=${idArrive}`;
+                    const trainDetailsUrl = `https://sncf.oof.li/api/circulation-details?number=${trainLine.number}&circulationDate=${encodeURIComponent(arrival.arrivalDate)}&arrivalStopPlaceId=${idArrive}`;
                     queries.push(fetchWithRetries(trainDetailsUrl).then(res => res.json()))
 
                     for (const situationalMessage of arrival.situationalMessages || []) {
