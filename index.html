@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TER</title>
     <link rel="stylesheet" href="https://unpkg.com/mvp.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://unpkg.com/alpinejs"></script>
 
@@ -17,22 +18,89 @@
         hr {
             margin: 2rem 0 !important;
         }
+
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .grid label {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grid button {
+            margin-left: 1em;
+            padding-left: 0.50em;
+            padding-right: 0.50em;
+            padding-top: 0.30em;
+            padding-bottom: 0.30em;
+            font-size: 1em;
+        }
+
     </style>
 </head>
 
 <body>
-    <main x-data="{ trains: [], alerts: [], start: $persist(87471003), end: $persist(87471037) }">
+    <main x-data="{
+        trains: [],
+        alerts: [],
+        start: $persist(87471003),
+        end: $persist(87471037),
+        swapValues() {
+            const temp = this.start;
+            this.start = this.end;
+            this.end = temp;
+        },
+        searchQuery: '',
+        searchResults: [],
+        async searchStation(name) {
+            if (name.length >= 3) {
+                const url = 'https://sncf.oof.li/api/stop-places-autocompletions/';
+                const encodedName = encodeURIComponent(name).replace(/%20/g, '+');
+                const fullUrl = `${url}${encodedName}`;
+
+                try {
+                    const response = await fetchWithRetries(fullUrl);
+                    const data = await response.json();
+                    this.searchResults = data;
+                } catch (error) {
+                    console.error(error);
+                }
+            } else {
+                this.searchResults = [];
+            }
+        },
+      }">
 
         <section style="gap:10px">
             <div>
                 <form x-on:submit.prevent="{trains, alerts} = await getTrains(start, end)">
-                    <label>Departure ID:
-                        <input type="text" x-model="start" placeholder="Enter ID" />
-                    </label>
-                    <label>Arrival ID:
-                        <input type="text" x-model="end" placeholder="Enter ID" />
-                    </label>
-                    <input type="submit" value="Search" />
+                    <div class="grid">
+                        <div class="box">
+                            <div>
+                                <label>Departure ID:
+                                    <input type="text" x-model="start" placeholder="Enter ID" />
+                                </label>
+                            </div>
+                            <div>
+                                <label>Arrival ID:
+                                    <input type="text" x-model="end" placeholder="Enter ID" />
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <button type="button" @click="swapValues">
+                                <i class="fas fa-exchange-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <input type="submit" value="Search" />
+                    </div>
                 </form>
             </div>
 
@@ -71,6 +139,30 @@
 
         <hr>
 
+        <section style="gap:10px">
+            <div class="grid">
+                <div>
+                <label>
+                    Search Station:
+                    <input type="text" x-model="searchQuery" @input="searchStation(searchQuery)" placeholder="Enter station name" />
+                </label>
+                </div>
+                <!-- Other form elements here -->
+            </div>
+
+            <div x-show="searchResults.length > 0" class="dropdown">
+                <ul>
+                  <template x-for="result in searchResults" :key="result.id">
+                    <template x-if="result.id.startsWith('OCE')">
+                      <li x-text="result.name + ' (ID: ' + result.id.replace('OCE', '') + ')'" />
+                    </template>
+                  </template>
+                </ul>
+              </div>
+        </section>
+
+        <hr>
+
         <article>
             <h2>Alerts</h2>
             <ul>
@@ -104,20 +196,6 @@
             }
 
             throw new Error(`Max retries exceeded for ${url}`);
-        }
-
-        function searchStation(name) {
-            const url = 'https://sncf.oof.li/api/stop-places-autocompletions/';
-            const encodedName = encodeURIComponent(name);
-            const fullUrl = `${url}${encodedName}`;
-
-            fetchWithRetries(fullUrl)
-                .then((response) => response.json())
-                .then((resp) => {
-                    resp.forEach((result) => {
-                        console.log(`${result.name} (${result.zipCode}) -> id = ${result.id.replace('OCE', '')}`);
-                    });
-                });
         }
 
         async function getDepartureTable(idDepart, idArrive) {
